@@ -9,15 +9,15 @@ Deep-Dive Low-Level Sections: C & C++ Systems, POSIX/Windows OS, Networking, Cry
 
 TABLE OF CONTENTS:
   [PART I: CORE MULTI-LANGUAGE COMPARISON]
-  SECTION  1: SIGNED INTEGER TYPES
-  SECTION  2: UNSIGNED INTEGER & ARCHITECTURE-SIZED TYPES
-  SECTION  3: FLOATING-POINT, FIXED-POINT, RATIONAL & NUMERIC TYPES
-  SECTION  4: BOOLEAN & TEXTUAL CHARACTER TYPES
-  SECTION  5: STRING & CONTIGUOUS BYTE BUFFER TYPES
-  SECTION  6: SEQUENCE & COLLECTION TYPES (ARRAYS, SLICES, TUPLES, QUEUES)
-  SECTION  7: ASSOCIATIVE & SET COLLECTIONS (HASH MAPS, TREES, SETS, BITSETS)
-  SECTION  8: USER-DEFINED, COMPOSITE & OBJECT TYPES (STRUCTS, CLASSES, INTERFACES)
-  SECTION  9: ALGEBRAIC DATA TYPES, ENUMS & VARIANTS
+  SECTION 1: SIGNED INTEGER TYPES
+  SECTION 2: UNSIGNED INTEGER & ARCHITECTURE-SIZED TYPES
+  SECTION 3: FLOATING-POINT, FIXED-POINT, RATIONAL & NUMERIC TYPES
+  SECTION 4: BOOLEAN & TEXTUAL CHARACTER TYPES
+  SECTION 5: STRING & CONTIGUOUS BYTE BUFFER TYPES
+  SECTION 6: SEQUENCE & COLLECTION TYPES (ARRAYS, SLICES, TUPLES, QUEUES)
+  SECTION 7: ASSOCIATIVE & SET COLLECTIONS (HASH MAPS, TREES, SETS, BITSETS)
+  SECTION 8: USER-DEFINED, COMPOSITE & OBJECT TYPES (STRUCTS, CLASSES, INTERFACES)
+  SECTION 9: ALGEBRAIC DATA TYPES, ENUMS & VARIANTS
   SECTION 10: POINTERS, REFERENCES & MEMORY MANAGEMENT TYPES
   SECTION 11: OPTIONALITY, ERROR HANDLING, BOTTOM & TOP TYPES
   SECTION 12: FUNCTIONAL, CALLABLE & CLOSURE TYPES
@@ -179,7 +179,7 @@ SECTION 11: OPTIONALITY, ERROR HANDLING, BOTTOM & TOP TYPES
 +-----------------------+------------------------+--------------------+----------------------------+----------------------+------------------------+------------------------+------------------------+-------------------------+----------------------+
 | Category / Concept    | Bits / Range           | C (C17/C23)        | C++ (C++20/23)             | Rust                 | Go                     | Java                   | C#                     | Python                  | TypeScript           |
 +=======================+========================+====================+============================+======================+========================+========================+========================+=========================+======================+
-| Null / Nil Value      | Absence of pointer/ref | NULL ((void*)0)    | nullptr                    | N/A (None in Option) | nil                    | null                   | null                   | None                    | null / undefined     |
+| Null / Nil Value      | Absence of pointer/ref | NULL (((void*)0))  | nullptr                    | N/A (None in Option) | nil                    | null                   | null                   | None                    | null / undefined     |
 | Optional / Maybe Type | Value or Nothing       | pointer / sentinel | std::optional<T>           | Option<T>            | *T (or custom generic) | Optional<T>            | Nullable<T> / T?       | Optional[T] (T | None)  | T | undefined / T?   |
 | Result / Error Type   | Value or Error object  | int status / errno | std::expected<T, E>        | Result<T, E>         | (T, error) multi-val   | Exception (Result lib) | Exception / Result lib | Exception (try/except)  | throw Error / Result |
 | Unit / Void Type      | No value / Empty tuple | void               | void                       | () (unit)            | struct{}               | void (Void boxed)      | void                   | None (NoneType)         | void / undefined     |
@@ -324,7 +324,7 @@ SECTION 19: N x N TYPE CONVERSION, CASTING & COERCION MATRIX
 | float32 -> float64 | Implicit lossless promotion               | val as f64 (lossless)       | float64(val) (explicit) | Implicit promotion            | Implicit promotion        | No-op (native 64b)           | No-op (native 64b)              |
 | float64 -> float32 | Implicit rounding / overflow              | val as f32 (rounds/inf)     | float32(val) (rounds)   | (float) val (rounds)          | (float) val (rounds)      | numpy.float32(val)           | Math.fround(val)                |
 | string -> integer  | atoi(s) / strtol(s, &end, 10)             | s.parse::<i32>() (Result)   | strconv.Atoi(s) (error) | Integer.parseInt(s) (throws)  | int.Parse / int.TryParse  | int(s) (ValueError)          | parseInt(s, 10) / Number(s)     |
-| integer -> string  | sprintf(buf, "%d", val)                   | val.to_string()             | strconv.Itoa(val)       | String.valueOf(val)           | val.ToString()            | str(val)                     | String(val) / `${val}`          |
+| integer -> string  | sprintf(buf, "%d", val)                   | val.to_string()             | strconv.Itoa(val)       | String.valueOf(val)           | val.ToString()            | str(val)                     | String(val) / ${val}            |
 | pointer -> integer | (uintptr_t) ptr                           | ptr as usize                | uintptr(ptr)            | N/A (managed refs)            | (IntPtr) ptr / (nint)     | ctypes.addressof             | N/A (managed)                   |
 | pointer -> pointer | reinterpret_cast<T*> / (T*)               | ptr as *const U / transmute | (*U)(unsafe.Pointer(p)) | N/A (type-safe)               | Unsafe.As<T, U>           | ctypes.cast                  | N/A (structural)                |
 +--------------------+-------------------------------------------+-----------------------------+-------------------------+-------------------------------+---------------------------+------------------------------+---------------------------------+
