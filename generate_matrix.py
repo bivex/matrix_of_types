@@ -1,0 +1,264 @@
+import os
+import sys
+
+def make_table(headers, rows, custom_widths=None):
+    col_widths = [len(h) for h in headers]
+    for row in rows:
+        if row == ["---"]:
+            continue
+        for i, cell in enumerate(row):
+            if i < len(col_widths):
+                col_widths[i] = max(col_widths[i], len(str(cell)))
+            else:
+                col_widths.append(len(str(cell)))
+                
+    if custom_widths:
+        for i, w in enumerate(custom_widths):
+            if i < len(col_widths):
+                col_widths[i] = max(col_widths[i], w)
+
+    sep = "+" + "+".join("-" * (w + 2) for w in col_widths) + "+"
+    double_sep = "+" + "+".join("=" * (w + 2) for w in col_widths) + "+"
+    
+    lines = []
+    lines.append(sep)
+    header_line = "|" + "|".join(f" {headers[i]:<{col_widths[i]}} " for i in range(len(headers))) + "|"
+    lines.append(header_line)
+    lines.append(double_sep)
+    
+    for row in rows:
+        if row == ["---"]:
+            lines.append(sep)
+            continue
+        row_line = "|" + "|".join(f" {str(row[i]):<{col_widths[i]}} " for i in range(len(row))) + "|"
+        lines.append(row_line)
+        
+    lines.append(sep)
+    return "\n".join(lines)
+
+headers_main = ["Category / Concept", "Bits / Range", "C (C17/C23)", "C++ (C++20/23)", "Rust", "Go", "Java", "C#", "Python", "TypeScript"]
+
+# 1. Signed Integers
+rows_signed_int = [
+    ["8-bit Signed", "8b [-128..127]", "int8_t / signed char", "std::int8_t", "i8", "int8", "byte", "sbyte", "int", "number"],
+    ["16-bit Signed", "16b [-32K..32K]", "int16_t / short", "std::int16_t", "i16", "int16", "short", "short", "int", "number"],
+    ["32-bit Signed", "32b [-2.1B..2.1B]", "int32_t / int", "std::int32_t", "i32", "int32 / rune", "int", "int", "int", "number"],
+    ["64-bit Signed", "64b [-9.2E18..9.2E18]", "int64_t / long long", "std::int64_t", "i64", "int64", "long", "long", "int", "number / bigint"],
+    ["128-bit Signed", "128b [~-1.7E38..]", "__int128_t (ext)", "__int128_t (ext)", "i128", "math/big.Int", "BigInteger", "Int128", "int", "bigint"],
+    ["Arch-sized Signed", "32/64b (Ptr Size)", "intptr_t / ptrdiff_t", "std::intptr_t", "isize", "int", "N/A (long)", "nint", "int", "number"],
+    ["Arbitrary Precision", "Unbounded", "mpz_t (GMP)", "boost::multiprecision", "num_bigint::BigInt", "big.Int (math/big)", "BigInteger", "BigInteger", "int (native)", "bigint (native)"]
+]
+
+# 2. Unsigned Integers
+rows_unsigned_int = [
+    ["8-bit Unsigned", "8b [0..255]", "uint8_t / uchar", "std::uint8_t", "u8", "uint8 / byte", "N/A (short/int)", "byte", "int", "number"],
+    ["16-bit Unsigned", "16b [0..65535]", "uint16_t / ushort", "std::uint16_t", "u16", "uint16", "char (16b unsigned)", "ushort", "int", "number"],
+    ["32-bit Unsigned", "32b [0..4.29B]", "uint32_t / uint", "std::uint32_t", "u32", "uint32", "Integer.toUnsigned*", "uint", "int", "number"],
+    ["64-bit Unsigned", "64b [0..1.84E19]", "uint64_t / ulonglong", "std::uint64_t", "u64", "uint64", "Long.toUnsigned*", "ulong", "int", "bigint"],
+    ["128-bit Unsigned", "128b [0..3.4E38]", "__uint128_t (ext)", "__uint128_t (ext)", "u128", "math/big.Int", "BigInteger", "UInt128", "int", "bigint"],
+    ["Arch-sized Unsigned", "32/64b (Size/Ptr)", "size_t / uintptr_t", "std::size_t", "usize", "uint / uintptr", "N/A (int/long)", "nuint", "int", "number"]
+]
+
+# 3. Floating-Point & Numeric
+rows_float = [
+    ["16-bit Float (Half)", "16b IEEE 754", "_Float16 (C23)", "std::float16_t", "f16 (nightly/crate)", "N/A", "Float.floatToFloat16", "Half", "float / numpy.f16", "number"],
+    ["32-bit Float (Single)", "32b IEEE 754", "float", "float", "f32", "float32", "float", "float", "float (64b)", "number (64b)"],
+    ["64-bit Float (Double)", "64b IEEE 754", "double", "double", "f64", "float64", "double", "double", "float (native)", "number (native)"],
+    ["Extended Float (80/128b)", "80/128b IEEE", "long double / _Float128", "long double / float128", "f128 (nightly)", "big.Float", "BigDecimal", "N/A (decimal)", "decimal.Decimal", "N/A (library)"],
+    ["Decimal (Fixed-Point)", "Exact decimal base-10", "N/A (custom/decNumber)", "N/A (boost::decimal)", "rust_decimal::Decimal", "shopspring/decimal", "BigDecimal", "decimal (128b)", "decimal.Decimal", "decimal.js"],
+    ["Complex Numbers", "Real + Imag pairs", "double _Complex", "std::complex<T>", "num_complex::Complex", "complex64/128", "Commons Math Complex", "Complex", "complex (1+2j)", "N/A (library)"]
+]
+
+# 4. Boolean & Textual Characters
+rows_bool_char = [
+    ["Boolean", "1b / 1B (true/false)", "bool (_Bool)", "bool", "bool", "bool", "boolean (Boolean)", "bool (Boolean)", "bool", "boolean"],
+    ["ASCII / Byte Char", "8-bit char/byte", "char", "char", "u8 (b'a')", "byte (uint8)", "byte", "byte", "bytes (b'a')", "string"],
+    ["Unicode Code Point", "21/32b Unicode scalar", "char32_t (<uchar.h>)", "char32_t", "char (32-bit)", "rune (int32)", "int / char (16b)", "Rune / char (16b)", "str (len 1)", "string"],
+    ["16-bit Unicode Unit", "UTF-16 code unit", "char16_t", "char16_t", "u16", "uint16", "char", "char", "str", "string"]
+]
+
+# 5. Strings & Byte Sequences
+rows_string_bytes = [
+    ["Owned Dynamic String", "UTF-8 / UTF-16 heap", "char* / char[] (manual)", "std::string", "String (UTF-8)", "string (immutable)", "String (UTF-16)", "string (UTF-16)", "str (immutable)", "string (immutable)"],
+    ["Borrowed String View", "Ptr + Len slice", "const char*", "std::string_view", "&str (borrowed UTF-8)", "string", "CharSequence", "ReadOnlySpan<char>", "memoryview / str", "string"],
+    ["Mutable String Buffer", "Capacity-growing", "open_memstream / buf", "std::string", "String", "strings.Builder", "StringBuilder", "StringBuilder", "io.StringIO", "string[] / Array"],
+    ["Raw Byte Array / Buffer", "Contiguous binary", "uint8_t[] / void*", "std::vector<uint8_t>", "Vec<u8> / &[u8]", "[]byte", "byte[]", "byte[] / Span<byte>", "bytes / bytearray", "Uint8Array / Buffer"],
+    ["C-Compatible String", "Null-terminated '\\0'", "char*", "const char*", "std::ffi::CString/CStr", "*C.char (cgo)", "byte[] + '\\0'", "sbyte* / IntPtr", "ctypes.c_char_p", "N/A (Buffer)"]
+]
+
+# 6. Collections & Sequence Types
+rows_sequences = [
+    ["Fixed-Size Array", "Stack/Inline N items", "T[N]", "std::array<T, N> / T[N]", "[T; N]", "[N]T", "T[]", "T[] / T[N] inline", "tuple / list", "[T, ...N] (tuple)"],
+    ["Dynamic Array / Vector", "Heap resizable list", "struct { T* d; sz n; }", "std::vector<T>", "Vec<T>", "[]T (slice)", "ArrayList<T>", "List<T>", "list", "Array<T> / T[]"],
+    ["Array Slice / View", "Non-owning fat pointer", "struct { T* p; sz len; }", "std::span<T>", "&[T] / &mut [T]", "[]T", "List.subList", "Span<T> / Memory<T>", "memoryview / slice", "TypedArray.subarray"],
+    ["Heterogeneous Tuple", "Multi-type product", "struct { ... }", "std::tuple<T1, T2>", "(T1, T2)", "struct { A T1; B T2 }", "record / Pair", "(T1, T2) ValueTuple", "tuple", "[T1, T2]"],
+    ["Double-Ended Queue", "FIFO / LIFO dequeue", "N/A (linked list)", "std::deque<T>", "VecDeque<T>", "container/list", "ArrayDeque<T>", "Queue<T> / Deque", "collections.deque", "Array (push/shift)"],
+    ["Linked List", "Node-pointer chain", "struct Node* next", "std::list<T>", "LinkedList<T>", "container/list", "LinkedList<T>", "LinkedList<T>", "collections.deque", "custom class"]
+]
+
+# 7. Associative & Set Collections
+rows_associative = [
+    ["Hash Map / Dictionary", "O(1) key-value table", "N/A (uthash / lib)", "std::unordered_map<K,V>", "HashMap<K, V>", "map[K]V", "HashMap<K, V>", "Dictionary<TKey, TVal>", "dict", "Map<K, V> / Record"],
+    ["Sorted Map (Tree)", "O(log N) ordered key", "N/A (red-black tree)", "std::map<K, V>", "BTreeMap<K, V>", "N/A (third-party)", "TreeMap<K, V>", "SortedDictionary<K, V>", "dict (insertion-ord)", "N/A (third-party)"],
+    ["Hash Set", "O(1) unique elements", "N/A (hash table keys)", "std::unordered_set<T>", "HashSet<T>", "map[T]struct{}", "HashSet<T>", "HashSet<T>", "set", "Set<T>"],
+    ["Sorted Set (Tree)", "O(log N) unique order", "N/A (tree nodes)", "std::set<T>", "BTreeSet<T>", "N/A (third-party)", "TreeSet<T>", "SortedSet<T>", "N/A (sorted list)", "N/A (third-party)"]
+]
+
+# 8. Composite, Custom & Object Types
+rows_composites = [
+    ["Plain Data Struct", "Layout of fields", "struct Foo { ... }", "struct Foo { ... }", "struct Foo { ... }", "type Foo struct { ... }", "record Foo(...) (Java16)", "struct / record struct", "@dataclass / NamedTuple", "interface Foo / type Foo"],
+    ["OOP Class", "Fields + methods + VMT", "N/A (struct + vtable)", "class Foo { ... }", "struct + impl Trait", "struct + methods", "class Foo { ... }", "class / record class", "class Foo: ...", "class Foo { ... }"],
+    ["Interface / Trait", "Contract / Polymorphism", "struct of func ptrs", "abstract class / concept", "trait Foo { ... }", "type Foo interface", "interface Foo { ... }", "interface IFoo { ... }", "abc.ABC / Protocol", "interface Foo"],
+    ["Anonymous Object", "Inline untyped fields", "struct { ... }", "struct { ... }", "N/A (tuples/structs)", "struct { ... }", "record (Java 16+)", "new { Foo = 1 }", "dict / SimpleNamespace", "{ foo: 1 } (object lit)"]
+]
+
+# 9. Algebraic Data Types, Enums & Variants
+rows_enums_variants = [
+    ["C-Style Enum", "Named integer constants", "enum Color { RED, ... }", "enum class Color", "enum Color (fieldless)", "const (iota)", "enum Color", "enum Color", "Enum (enum module)", "enum Color / Union"],
+    ["Tagged Union / Variant", "Sum type (Type A | B)", "tagged union (manual)", "std::variant<Ts...>", "enum Color { R(u8)... }", "any + type switch", "sealed interface + rec", "discriminated union", "Union[A, B] / A | B", "A | B (discriminated)"],
+    ["Untagged Union", "Overlapping raw memory", "union Data { int i; }", "union Data { int i; }", "union Data (unsafe)", "unsafe.Pointer", "N/A", "[StructLayout(Explicit)]", "ctypes.Union", "N/A"]
+]
+
+# 10. Memory, Pointers & Smart References
+rows_memory = [
+    ["Raw Untyped Pointer", "Direct memory address", "void*", "void*", "*const () / *mut ()", "unsafe.Pointer", "N/A", "void* (unsafe)", "ctypes.c_void_p", "N/A"],
+    ["Raw Typed Pointer", "Address to typed data", "T*", "T*", "*const T / *mut T", "*T", "N/A", "T* (unsafe)", "ctypes.POINTER(T)", "N/A"],
+    ["Safe Reference", "Guaranteed alias/borrow", "N/A (uses T*)", "T& / const T&", "&T / &mut T (borrow)", "*T (GC safe)", "Object ref (GC)", "ref T / in T / out T", "Object ref (GC)", "Object ref (GC)"],
+    ["Unique Ownership", "RAII Single-owner heap", "manual malloc/free", "std::unique_ptr<T>", "Box<T>", "N/A (GC managed)", "N/A (GC managed)", "N/A (GC managed)", "N/A (GC managed)", "N/A (GC managed)"],
+    ["Shared Ref-Counted", "Atomic/Shared refcount", "manual atomic refcnt", "std::shared_ptr<T>", "Rc<T> / Arc<T>", "N/A (GC managed)", "N/A (GC managed)", "N/A (GC managed)", "N/A (GC managed)", "N/A (GC managed)"],
+    ["Weak Non-Owning Ref", "Ref without retain cycle", "N/A", "std::weak_ptr<T>", "std::rc::Weak / Arc::Weak", "N/A (GC)", "WeakReference<T>", "WeakReference<T>", "weakref.ref", "WeakRef<T>"]
+]
+
+# 11. Optionality, Result & Special Types
+rows_special = [
+    ["Null / Nil Value", "Absence of pointer/ref", "NULL ((void*)0)", "nullptr", "N/A (None in Option)", "nil", "null", "null", "None", "null / undefined"],
+    ["Optional / Maybe Type", "Value or Nothing", "pointer / sentinel", "std::optional<T>", "Option<T>", "*T (or custom generic)", "Optional<T>", "Nullable<T> / T?", "Optional[T] (T | None)", "T | undefined / T?"],
+    ["Result / Error Type", "Value or Error object", "int status / errno", "std::expected<T, E>", "Result<T, E>", "(T, error) multi-val", "Exception (Result lib)", "Exception / Result lib", "Exception (try/except)", "throw Error / Result"],
+    ["Unit / Void Type", "No value / Empty tuple", "void", "void", "() (unit)", "struct{}", "void (Void boxed)", "void", "None (NoneType)", "void / undefined"],
+    ["Bottom / Never Type", "Does not return", "_Noreturn (C11)", "[[noreturn]] / unreachable", "! (never)", "panic / infinite loop", "throw Exception", "void [DoesNotReturn]", "typing.Never / NoReturn", "never"],
+    ["Top / Universal Type", "Accepts any value", "void*", "std::any", "Box<dyn Any>", "any (interface{})", "Object", "object", "object / Any", "unknown / any"]
+]
+
+# 12. Functions, Closures & Callables
+rows_functions = [
+    ["Function Pointer", "Code memory address", "R (*)(Args...)", "R (*)(Args...)", "fn(Args...) -> R", "func(Args...) R", "Method reference", "delegate*<Args..., R>", "Callable[[...], R]", "(args) => R"],
+    ["Closure / Callable", "Env captures + code", "context ptr + fn ptr", "std::function<R(Args)>", "impl Fn/FnMut/FnOnce", "func(Args...) R", "Function<T, R>", "Func<T, R> / Action<T>", "Callable (lambda/func)", "(args) => R / Function"]
+]
+
+# 13. Extended Modern Languages: Swift & Kotlin
+headers_extended = ["Category / Concept", "Bits / Semantic", "Swift (5 / 6)", "Kotlin (1.9 / 2.0)", "Rust (Reference)", "Go (Reference)"]
+rows_extended = [
+    ["8-bit Signed Int", "8b [-128..127]", "Int8", "Byte", "i8", "int8"],
+    ["16-bit Signed Int", "16b [-32K..32K]", "Int16", "Short", "i16", "int16"],
+    ["32-bit Signed Int", "32b [-2.1B..2.1B]", "Int32", "Int", "i32", "int32 / rune"],
+    ["64-bit Signed Int", "64b [-9.2E18..]", "Int64 / Int (64b)", "Long", "i64", "int64"],
+    ["Arch-sized Signed", "Target word size", "Int", "Int / Long", "isize", "int"],
+    ["8-bit Unsigned Int", "8b [0..255]", "UInt8", "UByte", "u8", "uint8 / byte"],
+    ["16-bit Unsigned Int", "16b [0..65535]", "UInt16", "UShort", "u16", "uint16"],
+    ["32-bit Unsigned Int", "32b [0..4.29B]", "UInt32", "UInt", "u32", "uint32"],
+    ["64-bit Unsigned Int", "64b [0..1.84E19]", "UInt64 / UInt", "ULong", "u64", "uint64"],
+    ["Float (Single 32b)", "32b IEEE 754", "Float", "Float", "f32", "float32"],
+    ["Double (64b)", "64b IEEE 754", "Double", "Double", "f64", "float64"],
+    ["Boolean", "1-bit logic", "Bool", "Boolean", "bool", "bool"],
+    ["Unicode Character", "Scalar / 16b code", "Character", "Char (16-bit)", "char (32-bit)", "rune (32-bit)"],
+    ["Dynamic String", "UTF-8 / UTF-16", "String (UTF-8)", "String (UTF-16)", "String (UTF-8)", "string (UTF-8)"],
+    ["Dynamic List/Array", "Growable sequence", "Array<T> / [T]", "List<T> / MutableList<T>", "Vec<T>", "[]T"],
+    ["Key-Value Map", "Hash map", "Dictionary<K, V>", "Map<K, V> / MutableMap<K,V>", "HashMap<K, V>", "map[K]V"],
+    ["Unique Set", "Hash set", "Set<T>", "Set<T> / MutableSet<T>", "HashSet<T>", "map[T]struct{}"],
+    ["Tuple", "Fixed product", "(T1, T2)", "Pair<A, B> / Triple<A, B, C>", "(T1, T2)", "struct { ... }"],
+    ["Optional / Nullable", "Presence / absence", "Optional<T> (T?)", "T? (Nullable reference)", "Option<T>", "*T"],
+    ["Tagged Union / Enum", "Algebraic Data Type", "enum Color { case red(Int) }", "sealed class / sealed interface", "enum Color { Red(i32) }", "any + type switch"],
+    ["Unit / Void", "No return value", "Void / ()", "Unit", "()", "struct{}"],
+    ["Never / Bottom", "Non-returning", "Never", "Nothing", "!", "panic"],
+    ["Closure / Function", "Callable reference", "(Args) -> Return", "(Args) -> Return", "impl Fn(Args) -> Return", "func(Args) Return"]
+]
+
+# 14. Type System Characteristics Matrix
+headers_type_sys = ["Language", "Typing Discipline", "Type Strength", "Inference Level", "Typing Style", "Null Safety Paradigm", "Generics Implementation", "Memory Management"]
+rows_type_sys = [
+    ["C", "Static", "Weak (implicit casts)", "None (C23 auto basic)", "Nominal", "Unsafe (NULL pointer)", "None (Macros / _Generic)", "Manual (malloc / free)"],
+    ["C++", "Static", "Medium-Strong", "Local (auto, decltype)", "Nominal + Structural (Concepts)", "Unsafe (nullptr / optional)", "Monomorphization (Templates)", "RAII / Smart Ptrs / Manual"],
+    ["Rust", "Static", "Strong (no implicit cast)", "Local + Bidirectional (let)", "Nominal (Traits)", "Safe (Option<T>, no null)", "Monomorphization (Generics/Traits)", "Ownership / Borrow Checker"],
+    ["Go", "Static", "Strong (explicit casts)", "Local (:= syntax)", "Structural (Interfaces)", "Semi-safe (nilable pointers/slices)", "Monomorphization (GC dict)", "Garbage Collected (Concurrent)"],
+    ["Java", "Static", "Strong", "Local (var in Java 10+)", "Nominal", "Unsafe (NullPointerException / Optional)", "Type Erasure (<T> erased to Object)", "Garbage Collected (Generational)"],
+    ["C#", "Static (+ dynamic opt)", "Strong", "Local (var keyword)", "Nominal", "Compiler-enforced (Nullable Ref Types)", "Reified Generics (CLR native)", "Garbage Collected (Generational)"],
+    ["Python", "Dynamic (Type hints)", "Strong (1 + '2' TypeError)", "Gradual / Static Type Checkers", "Duck Typing / Structural (Protocols)", "None (NoneType, Optional[T] hints)", "Type Erasure (typing module)", "Reference Counting + Cyclic GC"],
+    ["TypeScript", "Static (compiles to JS)", "Medium (JS semantics at runtime)", "Local + Full Contextual", "Structural (Duck typing)", "Strict (strictNullChecks / union undefined)", "Type Erasure (erased at compile)", "V8 Garbage Collector (Host JS)"],
+    ["Swift", "Static", "Strong", "Full Local (let / var)", "Nominal + Protocols", "Safe (Optional<T> / T?, no raw null)", "Monomorphization + Witness Tables", "Automatic Reference Counting (ARC)"],
+    ["Kotlin", "Static", "Strong", "Full Local (val / var)", "Nominal", "Safe (T vs T? in type system)", "Type Erasure (Reified in inline fun)", "Garbage Collected (JVM GC)"]
+]
+
+# 15. Type Hierarchy & Conversion Matrix
+headers_casts = ["Language", "Implicit Widening Allowed?", "Explicit Cast Syntax", "Checked / Safe Cast", "Reinterpret / Bitcast", "Parse String to Int"]
+rows_casts = [
+    ["C", "Yes (int -> float, short -> int)", "(type)val", "N/A (manual checks)", "*(T*)&val / memcpy", "atoi(s) / strtol(s, &end, 10)"],
+    ["C++", "Yes (numeric promotions)", "(type)val", "dynamic_cast<T*>(p)", "reinterpret_cast<T*>(p) / bit_cast", "std::stoi(s) / std::from_chars"],
+    ["Rust", "No (strictly explicit)", "val as TargetType", "TryFrom / TryInto traits", "std::mem::transmute / bytemuck", "s.parse::<i32>()"],
+    ["Go", "No (untyped constants only)", "TargetType(val)", "val.(TargetType) (type assertion)", "(*T)(unsafe.Pointer(p))", "strconv.Atoi(s) / ParseInt"],
+    ["Java", "Yes (byte -> short -> int -> long)", "(TargetType) val", "instanceof pattern matching", "Double.doubleToRawLongBits", "Integer.parseInt(s)"],
+    ["C#", "Yes (implicit operator)", "(TargetType) val", "val as TargetType / is Pattern", "Unsafe.As<T1, T2> / BitConverter", "int.Parse(s) / int.TryParse(s)"],
+    ["Python", "Yes (int -> float automatic)", "TargetType(val)", "isinstance(val, TargetType)", "struct.unpack / ctypes.cast", "int(s)"],
+    ["TypeScript", "Structural assignability", "val as TargetType / <TargetType>val", "val is TargetType (type guard)", "val as unknown as TargetType", "parseInt(s, 10) / Number(s)"]
+]
+
+out = []
+
+out.append("=" * 165)
+out.append("                             MATRIX OF PROGRAMMING LANGUAGE DATA TYPES                             ")
+out.append("=" * 165)
+out.append("")
+out.append("COMPREHENSIVE MULTI-LANGUAGE REFERENCE TABLE ACROSS PRIMITIVE, COMPOSITE, MEMORY, AND ABSTRACTION TYPES")
+out.append("Languages: C (C17/C23) | C++ (C++20/23) | Rust | Go | Java (17/21) | C# (.NET 8/9) | Python (3.10+) | TypeScript (5.x)")
+out.append("Extended Reference: Swift (5/6) | Kotlin (1.9/2.0)")
+out.append("")
+out.append("TABLE OF CONTENTS:")
+out.append("  1. SIGNED INTEGER TYPES")
+out.append("  2. UNSIGNED INTEGER & ARCHITECTURE-SIZED TYPES")
+out.append("  3. FLOATING-POINT, FIXED-POINT & NUMERIC TYPES")
+out.append("  4. BOOLEAN & TEXTUAL CHARACTER TYPES")
+out.append("  5. STRING & CONTIGUOUS BYTE BUFFER TYPES")
+out.append("  6. SEQUENCE & COLLECTION TYPES (ARRAYS, SLICES, TUPLES, QUEUES)")
+out.append("  7. ASSOCIATIVE & SET COLLECTIONS (HASH MAPS, TREES, SETS)")
+out.append("  8. USER-DEFINED, COMPOSITE & OBJECT TYPES (STRUCTS, CLASSES, INTERFACES)")
+out.append("  9. ALGEBRAIC DATA TYPES, ENUMS & VARIANTS")
+out.append(" 10. POINTERS, REFERENCES & MEMORY MANAGEMENT TYPES")
+out.append(" 11. OPTIONALITY, ERROR HANDLING, BOTTOM & TOP TYPES")
+out.append(" 12. FUNCTIONAL, CALLABLE & CLOSURE TYPES")
+out.append(" 13. EXTENDED COMPARISON MATRIX (SWIFT & KOTLIN)")
+out.append(" 14. TYPE SYSTEM PARADIGM & METADATA CHARACTERISTICS")
+out.append(" 15. TYPE CASTING, CONVERSION & PARSING MECHANISMS")
+out.append("")
+
+def add_section(title, headers, rows):
+    out.append("-" * 165)
+    out.append(f"SECTION {title}")
+    out.append("-" * 165)
+    out.append(make_table(headers, rows))
+    out.append("")
+
+add_section("1: SIGNED INTEGER TYPES", headers_main, rows_signed_int)
+add_section("2: UNSIGNED INTEGER & ARCHITECTURE-SIZED TYPES", headers_main, rows_unsigned_int)
+add_section("3: FLOATING-POINT, FIXED-POINT & NUMERIC TYPES", headers_main, rows_float)
+add_section("4: BOOLEAN & TEXTUAL CHARACTER TYPES", headers_main, rows_bool_char)
+add_section("5: STRING & CONTIGUOUS BYTE BUFFER TYPES", headers_main, rows_string_bytes)
+add_section("6: SEQUENCE & COLLECTION TYPES (ARRAYS, SLICES, TUPLES, QUEUES)", headers_main, rows_sequences)
+add_section("7: ASSOCIATIVE & SET COLLECTIONS (HASH MAPS, TREES, SETS)", headers_main, rows_associative)
+add_section("8: USER-DEFINED, COMPOSITE & OBJECT TYPES (STRUCTS, CLASSES, INTERFACES)", headers_main, rows_composites)
+add_section("9: ALGEBRAIC DATA TYPES, ENUMS & VARIANTS", headers_main, rows_enums_variants)
+add_section("10: POINTERS, REFERENCES & MEMORY MANAGEMENT TYPES", headers_main, rows_memory)
+add_section("11: OPTIONALITY, ERROR HANDLING, BOTTOM & TOP TYPES", headers_main, rows_special)
+add_section("12: FUNCTIONAL, CALLABLE & CLOSURE TYPES", headers_main, rows_functions)
+add_section("13: EXTENDED COMPARISON MATRIX (SWIFT & KOTLIN)", headers_extended, rows_extended)
+add_section("14: TYPE SYSTEM PARADIGM & METADATA CHARACTERISTICS", headers_type_sys, rows_type_sys)
+add_section("15: TYPE CASTING, CONVERSION & PARSING MECHANISMS", headers_casts, rows_casts)
+
+out.append("=" * 165)
+out.append("                                        END OF MATRIX OF TYPES                                      ")
+out.append("=" * 165)
+
+content = "\n".join(out)
+target_path = "/Volumes/External/Code/matrix_of_types/matrix_of_types.txt"
+with open(target_path, "w", encoding="utf-8") as f:
+    f.write(content)
+
+print(f"Generated {target_path} successfully. Total lines: {len(out)}, File size: {len(content)} bytes.")
