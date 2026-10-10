@@ -1,5 +1,5 @@
-import os
 import sys
+import os
 
 def make_table(headers, rows, custom_widths=None):
     col_widths = [len(h) for h in headers]
@@ -62,10 +62,12 @@ rows_unsigned_int = [
 # 3. Floating-Point & Numeric
 rows_float = [
     ["16-bit Float (Half)", "16b IEEE 754", "_Float16 (C23)", "std::float16_t", "f16 (nightly/crate)", "N/A", "Float.floatToFloat16", "Half", "float / numpy.f16", "number"],
+    ["16-bit Brain Float", "16b (8e, 7m)", "__bf16 (ext)", "std::bfloat16_t", "bfloat16 (crate)", "N/A", "N/A (DL libs)", "N/A (Tensors)", "torch.bfloat16", "N/A"],
     ["32-bit Float (Single)", "32b IEEE 754", "float", "float", "f32", "float32", "float", "float", "float (64b)", "number (64b)"],
     ["64-bit Float (Double)", "64b IEEE 754", "double", "double", "f64", "float64", "double", "double", "float (native)", "number (native)"],
     ["Extended Float (80/128b)", "80/128b IEEE", "long double / _Float128", "long double / float128", "f128 (nightly)", "big.Float", "BigDecimal", "N/A (decimal)", "decimal.Decimal", "N/A (library)"],
     ["Decimal (Fixed-Point)", "Exact decimal base-10", "N/A (custom/decNumber)", "N/A (boost::decimal)", "rust_decimal::Decimal", "shopspring/decimal", "BigDecimal", "decimal (128b)", "decimal.Decimal", "decimal.js"],
+    ["Rational / Fraction", "Exact ratio (num/den)", "N/A (lib)", "boost::rational<T>", "num_rational::Ratio<T>", "big.Rat (math/big)", "Commons Math Fraction", "BigRational (NuGet)", "fractions.Fraction", "fraction.js"],
     ["Complex Numbers", "Real + Imag pairs", "double _Complex", "std::complex<T>", "num_complex::Complex", "complex64/128", "Commons Math Complex", "Complex", "complex (1+2j)", "N/A (library)"]
 ]
 
@@ -101,7 +103,8 @@ rows_associative = [
     ["Hash Map / Dictionary", "O(1) key-value table", "N/A (uthash / lib)", "std::unordered_map<K,V>", "HashMap<K, V>", "map[K]V", "HashMap<K, V>", "Dictionary<TKey, TVal>", "dict", "Map<K, V> / Record"],
     ["Sorted Map (Tree)", "O(log N) ordered key", "N/A (red-black tree)", "std::map<K, V>", "BTreeMap<K, V>", "N/A (third-party)", "TreeMap<K, V>", "SortedDictionary<K, V>", "dict (insertion-ord)", "N/A (third-party)"],
     ["Hash Set", "O(1) unique elements", "N/A (hash table keys)", "std::unordered_set<T>", "HashSet<T>", "map[T]struct{}", "HashSet<T>", "HashSet<T>", "set", "Set<T>"],
-    ["Sorted Set (Tree)", "O(log N) unique order", "N/A (tree nodes)", "std::set<T>", "BTreeSet<T>", "N/A (third-party)", "TreeSet<T>", "SortedSet<T>", "N/A (sorted list)", "N/A (third-party)"]
+    ["Sorted Set (Tree)", "O(log N) unique order", "N/A (tree nodes)", "std::set<T>", "BTreeSet<T>", "N/A (third-party)", "TreeSet<T>", "SortedSet<T>", "N/A (sorted list)", "N/A (third-party)"],
+    ["Bit Set / Bit Array", "Dense bit flags", "uint32_t flags / bitfields", "std::bitset<N>", "bitvec::BitVec", "big.Int / math/bits", "BitSet", "BitArray", "int (bitwise)", "Uint8Array / bigint"]
 ]
 
 # 8. Composite, Custom & Object Types
@@ -145,116 +148,230 @@ rows_functions = [
     ["Closure / Callable", "Env captures + code", "context ptr + fn ptr", "std::function<R(Args)>", "impl Fn/FnMut/FnOnce", "func(Args...) R", "Function<T, R>", "Func<T, R> / Action<T>", "Callable (lambda/func)", "(args) => R / Function"]
 ]
 
-# 13. Extended Modern Languages: Swift & Kotlin
-headers_extended = ["Category / Concept", "Bits / Semantic", "Swift (5 / 6)", "Kotlin (1.9 / 2.0)", "Rust (Reference)", "Go (Reference)"]
+# 13. Concurrency, Async & Threading Primitives
+rows_concurrency = [
+    ["Future / Promise / Task", "Deferred computation", "thrd_t / callback", "std::future<T>", "impl Future<Output=T>", "chan T / goroutine", "CompletableFuture<T>", "Task<T> / ValueTask<T>", "asyncio.Task[T]", "Promise<T>"],
+    ["Concurrency Channel", "Message passing queue", "ringbuf + mutex", "boost::fibers::channel", "tokio::sync::mpsc", "chan T (native)", "BlockingQueue<T>", "Channel<T>", "asyncio.Queue[T]", "AsyncQueue / emitter"],
+    ["Mutual Exclusion (Mutex)", "Lock for exclusive access", "mtx_t (threads.h)", "std::mutex", "std::sync::Mutex<T>", "sync.Mutex", "ReentrantLock", "lock(obj) / Monitor", "threading.Lock", "N/A (event loop)"],
+    ["Read-Write Lock", "Multi-read single-write", "pthread_rwlock_t", "std::shared_mutex", "std::sync::RwLock<T>", "sync.RWMutex", "ReentrantReadWriteLock", "ReaderWriterLockSlim", "threading.RLock", "N/A"],
+    ["Atomic Integer / Ptr", "Lock-free hardware CAS", "_Atomic(int32_t)", "std::atomic<T>", "AtomicI32 / AtomicUsize", "sync/atomic.Int32", "AtomicInteger / VarHandle", "Interlocked / Volatile", "N/A (GIL protected)", "Atomics (SharedArrayBuf)"],
+    ["OS Thread Handle", "OS schedulable thread", "thrd_t", "std::jthread / thread", "std::thread::JoinHandle", "N/A (M:N runtime)", "Thread (OS / Virtual)", "System.Threading.Thread", "threading.Thread", "Worker (Node / Web)"]
+]
+
+# 14. SIMD & Hardware Vector Types
+rows_simd = [
+    ["128-bit Vector (4xf32)", "128-bit SIMD lane", "__m128 (SSE)", "__m128 / std::simd", "core::simd::f32x4", "internal asm", "FloatVector (SPECIES_128)", "Vector128<float>", "numpy.ndarray (C)", "Wasm v128 / WebGL"],
+    ["256-bit Vector (8xf32)", "256-bit SIMD lane", "__m256 (AVX)", "__m256 / std::simd", "core::simd::f32x8", "internal asm", "FloatVector (SPECIES_256)", "Vector256<float>", "numpy.ndarray (C)", "Wasm SIMD"],
+    ["512-bit Vector (16xf32)", "512-bit SIMD lane", "__m512 (AVX-512)", "__m512 / std::simd", "core::simd::f32x16", "internal asm", "FloatVector (SPECIES_512)", "Vector512<float>", "numpy.ndarray (C)", "N/A"],
+    ["Portable SIMD Vector", "Hardware agnostic SIMD", "vector extensions", "std::experimental::simd", "std::simd::Simd<T, N>", "N/A", "jdk.incubator.vector", "System.Numerics.Vector<T>", "numpy vectorized", "N/A"]
+]
+
+# 15. Temporal Types: Dates, Times & Durations
+rows_temporal = [
+    ["Monotonic Instant", "Elapsed / clock timing", "struct timespec", "chrono::steady_clock", "std::time::Instant", "time.Time (monotonic)", "java.time.Instant", "Stopwatch.GetTimestamp", "time.monotonic()", "performance.now()"],
+    ["UTC Wall Timestamp", "Posix epoch timestamp", "time_t", "chrono::system_clock", "chrono::DateTime<Utc>", "time.Time", "java.time.Instant", "DateTimeOffset.UtcNow", "datetime.datetime.utcnow", "Date.now() / Date"],
+    ["Civil / Local Date-Time", "Calendar Y-M-D H:M:S", "struct tm", "chrono::year_month_day", "chrono::NaiveDateTime", "time.Time", "java.time.LocalDateTime", "DateTime", "datetime.datetime", "Temporal.PlainDateTime"],
+    ["Timezone-Aware Time", "Timestamp + TZ offset", "struct tm + tzset", "chrono::zoned_time", "chrono::DateTime<Tz>", "time.Time (Location)", "java.time.ZonedDateTime", "DateTimeOffset", "datetime (zoneinfo)", "Temporal.ZonedDateTime"],
+    ["Time Span / Duration", "Delta between instants", "time_t / double secs", "chrono::duration", "std::time::Duration", "time.Duration (int64 ns)", "java.time.Duration", "TimeSpan", "datetime.timedelta", "Temporal.Duration / ms"]
+]
+
+# 16. SQL Database to Programming Language Type Mappings
+headers_sql = ["SQL Type Standard", "PostgreSQL / MySQL", "C / C++", "Rust", "Go", "Java (JDBC)", "C# (.NET)", "Python", "TypeScript"]
+rows_sql = [
+    ["BOOLEAN", "BOOLEAN / TINYINT(1)", "bool", "bool", "bool", "boolean (Types.BOOLEAN)", "bool (DbType.Boolean)", "bool", "boolean"],
+    ["SMALLINT", "INT2 / SMALLINT (16b)", "int16_t", "i16", "int16", "short (Types.SMALLINT)", "short (DbType.Int16)", "int", "number"],
+    ["INTEGER", "INT4 / INT (32b)", "int32_t", "i32", "int32", "int (Types.INTEGER)", "int (DbType.Int32)", "int", "number"],
+    ["BIGINT", "INT8 / BIGINT (64b)", "int64_t", "i64", "int64", "long (Types.BIGINT)", "long (DbType.Int64)", "int", "bigint / number"],
+    ["NUMERIC / DECIMAL", "NUMERIC(p,s) / DECIMAL", "char* / custom dec", "rust_decimal::Decimal", "shopspring/decimal", "BigDecimal (Types.NUMERIC)", "decimal (DbType.Decimal)", "decimal.Decimal", "string / Decimal.js"],
+    ["REAL / FLOAT4", "REAL / FLOAT (32b)", "float", "f32", "float32", "float (Types.REAL)", "float (DbType.Single)", "float", "number"],
+    ["DOUBLE PRECISION", "FLOAT8 / DOUBLE (64b)", "double", "f64", "float64", "double (Types.DOUBLE)", "double (DbType.Double)", "float", "number"],
+    ["VARCHAR / TEXT", "VARCHAR(n) / TEXT", "const char* / string", "String", "string", "String (Types.VARCHAR)", "string (DbType.String)", "str", "string"],
+    ["BYTEA / BLOB", "BYTEA / BLOB / VARBINARY", "uint8_t* / vector<u8>", "Vec<u8>", "[]byte", "byte[] / Blob", "byte[] (DbType.Binary)", "bytes", "Uint8Array / Buffer"],
+    ["TIMESTAMP (TZ)", "TIMESTAMPTZ / TIMESTAMP", "time_t / chrono", "chrono::DateTime<Utc>", "time.Time", "OffsetDateTime (JDBC 4.2)", "DateTimeOffset", "datetime.datetime", "Date / string (ISO)"],
+    ["UUID", "UUID / BINARY(16)", "uuid_t / uint8_t[16]", "uuid::Uuid", "google/uuid.UUID", "java.util.UUID", "Guid (DbType.Guid)", "uuid.UUID", "string"],
+    ["JSON / JSONB", "JSONB / JSON", "nlohmann::json", "serde_json::Value", "json.RawMessage / any", "String / JsonNode", "JsonDocument / string", "dict / list", "any / Record<string,any>"]
+]
+
+# 17. Extended Systems, Functional & Scripting Languages Matrix
+headers_extended = ["Category / Concept", "Zig (0.13+)", "Haskell (GHC 9+)", "OCaml (5.x)", "Swift (5/6)", "Kotlin (2.0)", "PHP (8.2+)", "Ruby (3.2+)"]
 rows_extended = [
-    ["8-bit Signed Int", "8b [-128..127]", "Int8", "Byte", "i8", "int8"],
-    ["16-bit Signed Int", "16b [-32K..32K]", "Int16", "Short", "i16", "int16"],
-    ["32-bit Signed Int", "32b [-2.1B..2.1B]", "Int32", "Int", "i32", "int32 / rune"],
-    ["64-bit Signed Int", "64b [-9.2E18..]", "Int64 / Int (64b)", "Long", "i64", "int64"],
-    ["Arch-sized Signed", "Target word size", "Int", "Int / Long", "isize", "int"],
-    ["8-bit Unsigned Int", "8b [0..255]", "UInt8", "UByte", "u8", "uint8 / byte"],
-    ["16-bit Unsigned Int", "16b [0..65535]", "UInt16", "UShort", "u16", "uint16"],
-    ["32-bit Unsigned Int", "32b [0..4.29B]", "UInt32", "UInt", "u32", "uint32"],
-    ["64-bit Unsigned Int", "64b [0..1.84E19]", "UInt64 / UInt", "ULong", "u64", "uint64"],
-    ["Float (Single 32b)", "32b IEEE 754", "Float", "Float", "f32", "float32"],
-    ["Double (64b)", "64b IEEE 754", "Double", "Double", "f64", "float64"],
-    ["Boolean", "1-bit logic", "Bool", "Boolean", "bool", "bool"],
-    ["Unicode Character", "Scalar / 16b code", "Character", "Char (16-bit)", "char (32-bit)", "rune (32-bit)"],
-    ["Dynamic String", "UTF-8 / UTF-16", "String (UTF-8)", "String (UTF-16)", "String (UTF-8)", "string (UTF-8)"],
-    ["Dynamic List/Array", "Growable sequence", "Array<T> / [T]", "List<T> / MutableList<T>", "Vec<T>", "[]T"],
-    ["Key-Value Map", "Hash map", "Dictionary<K, V>", "Map<K, V> / MutableMap<K,V>", "HashMap<K, V>", "map[K]V"],
-    ["Unique Set", "Hash set", "Set<T>", "Set<T> / MutableSet<T>", "HashSet<T>", "map[T]struct{}"],
-    ["Tuple", "Fixed product", "(T1, T2)", "Pair<A, B> / Triple<A, B, C>", "(T1, T2)", "struct { ... }"],
-    ["Optional / Nullable", "Presence / absence", "Optional<T> (T?)", "T? (Nullable reference)", "Option<T>", "*T"],
-    ["Tagged Union / Enum", "Algebraic Data Type", "enum Color { case red(Int) }", "sealed class / sealed interface", "enum Color { Red(i32) }", "any + type switch"],
-    ["Unit / Void", "No return value", "Void / ()", "Unit", "()", "struct{}"],
-    ["Never / Bottom", "Non-returning", "Never", "Nothing", "!", "panic"],
-    ["Closure / Function", "Callable reference", "(Args) -> Return", "(Args) -> Return", "impl Fn(Args) -> Return", "func(Args) Return"]
+    ["8-bit Signed Int", "i8", "Int8", "int (tagged)", "Int8", "Byte", "int", "Integer"],
+    ["16-bit Signed Int", "i16", "Int16", "int", "Int16", "Short", "int", "Integer"],
+    ["32-bit Signed Int", "i32", "Int32", "int32", "Int32", "Int", "int", "Integer"],
+    ["64-bit Signed Int", "i64", "Int64", "int64", "Int64 / Int (64b)", "Long", "int", "Integer"],
+    ["Unsigned Integers", "u8, u16, u32, u64", "Word8, Word16...", "N/A (uint lib)", "UInt8, UInt16...", "UByte, UShort...", "N/A (signed only)", "N/A (signed only)"],
+    ["Arbitrary Precision", "std.math.big.int", "Integer (native)", "Z.t (zarith)", "BigInt (lib)", "BigInteger", "GMP / bcmath", "Integer (auto-upcast)"],
+    ["32-bit Float", "f32", "Float", "float (64b)", "Float", "Float", "float (64b)", "Float (64b)"],
+    ["64-bit Float", "f64", "Double", "float", "Double", "Double", "float", "Float"],
+    ["Boolean", "bool", "Bool", "bool", "Bool", "Boolean", "bool", "TrueClass / FalseClass"],
+    ["Unicode Character", "u21 / u8", "Char", "char (8-bit)", "Character", "Char (16-bit)", "string (len 1)", "String (len 1)"],
+    ["Dynamic String", "[]const u8", "String / Text", "string", "String (UTF-8)", "String (UTF-16)", "string", "String"],
+    ["Dynamic Array / List", "std.ArrayList(T)", "[a] (list) / Vector", "list / array", "Array<T> / [T]", "List<T> / MutableList<T>", "array", "Array"],
+    ["Associative Map", "std.AutoHashMap(K, V)", "Map.Map k v", "Map.Make / Hashtbl", "Dictionary<K, V>", "Map<K, V>", "array (assoc)", "Hash"],
+    ["Unique Set", "AutoHashMap(T, void)", "Set.Set a", "Set.Make", "Set<T>", "Set<T>", "array (keys)", "Set"],
+    ["Tuple", "struct { T1, T2 }", "(a, b)", "a * b", "(T1, T2)", "Pair<A, B>", "array", "[a, b]"],
+    ["Optional / Nullable", "?T (optional pointer)", "Maybe a", "'a option", "Optional<T> (T?)", "T? (Nullable ref)", "?Type / null", "nil (dynamic)"],
+    ["Result / Error", "!T (error union)", "Either e a", "('a, 'e) result", "Result<T, E>", "Result<T>", "throw Exception", "rescue Exception"],
+    ["Tagged Union / ADT", "union(enum) { ... }", "data Type = A | B", "type t = A | B", "enum T { case a(Int) }", "sealed class/interface", "enum / match", "dynamic class hierarchy"],
+    ["Closure / Function", "*const fn(...) ...", "a -> b", "'a -> 'b", "(Args) -> Ret", "(Args) -> Ret", "Closure / callable", "Proc / lambda"],
+    ["Unit / Void", "void", "()", "unit (())", "Void / ()", "Unit", "void", "nil"],
+    ["Bottom / Never", "noreturn", "Void (empty)", "empty", "Never", "Nothing", "never", "N/A"]
 ]
 
-# 14. Type System Characteristics Matrix
-headers_type_sys = ["Language", "Typing Discipline", "Type Strength", "Inference Level", "Typing Style", "Null Safety Paradigm", "Generics Implementation", "Memory Management"]
-rows_type_sys = [
-    ["C", "Static", "Weak (implicit casts)", "None (C23 auto basic)", "Nominal", "Unsafe (NULL pointer)", "None (Macros / _Generic)", "Manual (malloc / free)"],
-    ["C++", "Static", "Medium-Strong", "Local (auto, decltype)", "Nominal + Structural (Concepts)", "Unsafe (nullptr / optional)", "Monomorphization (Templates)", "RAII / Smart Ptrs / Manual"],
+# 18. Type System Characteristics & Taxonomy (15 Languages!)
+headers_taxonomy = ["Language", "Typing Paradigm", "Type Enforcement", "Inference Level", "Typing Style", "Null Safety Model", "Generics / Polymorphism", "Memory Management"]
+rows_taxonomy = [
+    ["C", "Static", "Weak (implicit conversions)", "None (C23 auto basic)", "Nominal", "Unsafe (NULL pointer)", "None (Macros / _Generic)", "Manual (malloc / free)"],
+    ["C++", "Static", "Medium-Strong", "Local (auto, decltype)", "Nominal + Concepts", "Unsafe (nullptr / optional)", "Monomorphization (Templates)", "RAII / Smart Pointers / Manual"],
     ["Rust", "Static", "Strong (no implicit cast)", "Local + Bidirectional (let)", "Nominal (Traits)", "Safe (Option<T>, no null)", "Monomorphization (Generics/Traits)", "Ownership / Borrow Checker"],
-    ["Go", "Static", "Strong (explicit casts)", "Local (:= syntax)", "Structural (Interfaces)", "Semi-safe (nilable pointers/slices)", "Monomorphization (GC dict)", "Garbage Collected (Concurrent)"],
-    ["Java", "Static", "Strong", "Local (var in Java 10+)", "Nominal", "Unsafe (NullPointerException / Optional)", "Type Erasure (<T> erased to Object)", "Garbage Collected (Generational)"],
-    ["C#", "Static (+ dynamic opt)", "Strong", "Local (var keyword)", "Nominal", "Compiler-enforced (Nullable Ref Types)", "Reified Generics (CLR native)", "Garbage Collected (Generational)"],
-    ["Python", "Dynamic (Type hints)", "Strong (1 + '2' TypeError)", "Gradual / Static Type Checkers", "Duck Typing / Structural (Protocols)", "None (NoneType, Optional[T] hints)", "Type Erasure (typing module)", "Reference Counting + Cyclic GC"],
-    ["TypeScript", "Static (compiles to JS)", "Medium (JS semantics at runtime)", "Local + Full Contextual", "Structural (Duck typing)", "Strict (strictNullChecks / union undefined)", "Type Erasure (erased at compile)", "V8 Garbage Collector (Host JS)"],
+    ["Zig", "Static", "Strong (explicit casts)", "Compile-time (comptime)", "Nominal + Comptime Duck", "Safe (?T, error unions !T)", "Comptime (Types as values)", "Manual (Explicit Allocators)"],
+    ["Go", "Static", "Strong (explicit casts)", "Local (:= syntax)", "Structural (Interfaces)", "Semi-safe (nilable pointers/slices)", "Monomorphization (GC dictionary)", "Garbage Collected (Concurrent)"],
+    ["Java", "Static", "Strong", "Local (var keyword)", "Nominal", "Unsafe (NullPointerException / Optional)", "Type Erasure (<T> erased to Object)", "Garbage Collected (Generational)"],
+    ["C#", "Static (+ dynamic opt)", "Strong", "Local (var keyword)", "Nominal", "Compiler-enforced (Nullable Ref Types)", "Reified Generics (Native CLR)", "Garbage Collected (Generational)"],
+    ["Python", "Dynamic (Type hints)", "Strong (1 + '2' is TypeError)", "Gradual (mypy / pyright)", "Duck Typing / Protocols", "None (NoneType, Optional[T] hints)", "Type Erasure (typing module)", "Reference Counting + Cyclic GC"],
+    ["TypeScript", "Static (compiles to JS)", "Medium (JS semantics at runtime)", "Local + Full Contextual", "Structural (Duck typing)", "Strict (strictNullChecks / union undefined)", "Type Erasure (erased at compile)", "Host Garbage Collector (V8/JSC)"],
+    ["Haskell", "Static", "Strong (pure type safety)", "Global (Hindley-Milner)", "Nominal + Typeclasses", "Safe (Maybe a, no null)", "Parametric (Typeclasses / Higher-rank)", "Garbage Collected (Lazy evaluation)"],
+    ["OCaml", "Static", "Strong (sound type system)", "Global (Hindley-Milner)", "Nominal + Structural (Modules/Objects)", "Safe ('a option, no null)", "Parametric (Functors / Polymorphic)", "Garbage Collected (Generational GC)"],
     ["Swift", "Static", "Strong", "Full Local (let / var)", "Nominal + Protocols", "Safe (Optional<T> / T?, no raw null)", "Monomorphization + Witness Tables", "Automatic Reference Counting (ARC)"],
-    ["Kotlin", "Static", "Strong", "Full Local (val / var)", "Nominal", "Safe (T vs T? in type system)", "Type Erasure (Reified in inline fun)", "Garbage Collected (JVM GC)"]
+    ["Kotlin", "Static", "Strong", "Full Local (val / var)", "Nominal", "Safe (T vs T? in type system)", "Type Erasure (Reified in inline fun)", "Garbage Collected (JVM GC)"],
+    ["PHP", "Dynamic (+ strict_types)", "Gradual (weak by default, strict opt)", "Local (none / dynamic)", "Nominal + Duck", "Safe (?Type in type hints)", "Type Erasure (Generics via DocBlocks)", "Reference Counting + Cycle Collector"],
+    ["Ruby", "Dynamic", "Strong (no implicit '1' + 2)", "None (dynamic runtime)", "Pure Duck Typing", "None (nil is NilClass object)", "Duck Typing (no static generics)", "Garbage Collected (Mark-and-Sweep)"]
 ]
 
-# 15. Type Hierarchy & Conversion Matrix
-headers_casts = ["Language", "Implicit Widening Allowed?", "Explicit Cast Syntax", "Checked / Safe Cast", "Reinterpret / Bitcast", "Parse String to Int"]
+# 19. N x N Type Conversion & Coercion Matrix
+headers_casts = ["Conversion Pair", "C / C++ Behavior", "Rust Behavior", "Go Behavior", "Java Behavior", "C# Behavior", "Python Behavior", "TypeScript Behavior"]
 rows_casts = [
-    ["C", "Yes (int -> float, short -> int)", "(type)val", "N/A (manual checks)", "*(T*)&val / memcpy", "atoi(s) / strtol(s, &end, 10)"],
-    ["C++", "Yes (numeric promotions)", "(type)val", "dynamic_cast<T*>(p)", "reinterpret_cast<T*>(p) / bit_cast", "std::stoi(s) / std::from_chars"],
-    ["Rust", "No (strictly explicit)", "val as TargetType", "TryFrom / TryInto traits", "std::mem::transmute / bytemuck", "s.parse::<i32>()"],
-    ["Go", "No (untyped constants only)", "TargetType(val)", "val.(TargetType) (type assertion)", "(*T)(unsafe.Pointer(p))", "strconv.Atoi(s) / ParseInt"],
-    ["Java", "Yes (byte -> short -> int -> long)", "(TargetType) val", "instanceof pattern matching", "Double.doubleToRawLongBits", "Integer.parseInt(s)"],
-    ["C#", "Yes (implicit operator)", "(TargetType) val", "val as TargetType / is Pattern", "Unsafe.As<T1, T2> / BitConverter", "int.Parse(s) / int.TryParse(s)"],
-    ["Python", "Yes (int -> float automatic)", "TargetType(val)", "isinstance(val, TargetType)", "struct.unpack / ctypes.cast", "int(s)"],
-    ["TypeScript", "Structural assignability", "val as TargetType / <TargetType>val", "val is TargetType (type guard)", "val as unknown as TargetType", "parseInt(s, 10) / Number(s)"]
+    ["bool -> integer", "Implicit promotion (0 or 1)", "val as i32 (explicit)", "Explicit if/else needed", "Explicit (val ? 1 : 0)", "Convert.ToInt32(val)", "int(val) (True==1, False==0)", "Number(val) (true->1, false->0)"],
+    ["int8 -> int32", "Implicit lossless widening", "val as i32 (or i32::from)", "int32(val) (explicit)", "Implicit widening", "Implicit widening", "Automatic (all ints same)", "No-op (all are number)"],
+    ["int32 -> int8", "Implicit truncation (UB on overflow in C)", "val as i8 (truncates)", "int8(val) (truncates)", "(byte) val (truncates)", "(sbyte) val (checked opt)", "N/A (single int type)", "val & 0xFF (bitwise mask)"],
+    ["int32 -> int64", "Implicit widening", "val as i64 (or i64::from)", "int64(val) (explicit)", "Implicit widening", "Implicit widening", "Automatic", "BigInt(val) (if bigint)"],
+    ["int64 -> int32", "Implicit narrowing (data loss)", "val as i32 (or TryFrom)", "int32(val) (truncates)", "(int) val (truncates)", "(int) val (checked opt)", "Automatic", "Number(val) (clamp/round)"],
+    ["int32 -> float32", "Implicit (may lose low bits)", "val as f32 (lossy cast)", "float32(val) (explicit)", "Implicit (may lose precision)", "Implicit", "float(val)", "No-op (number is f64)"],
+    ["float32 -> int32", "Implicit truncation to zero", "val as i32 (saturates)", "int32(val) (truncates)", "(int) val (truncates)", "(int) val (truncates)", "int(val) (truncates)", "Math.trunc(val) | 0"],
+    ["float32 -> float64", "Implicit lossless promotion", "val as f64 (lossless)", "float64(val) (explicit)", "Implicit promotion", "Implicit promotion", "No-op (native 64b)", "No-op (native 64b)"],
+    ["float64 -> float32", "Implicit rounding / overflow", "val as f32 (rounds/inf)", "float32(val) (rounds)", "(float) val (rounds)", "(float) val (rounds)", "numpy.float32(val)", "Math.fround(val)"],
+    ["string -> integer", "atoi(s) / strtol(s, &end, 10)", "s.parse::<i32>() (Result)", "strconv.Atoi(s) (error)", "Integer.parseInt(s) (throws)", "int.Parse / int.TryParse", "int(s) (ValueError)", "parseInt(s, 10) / Number(s)"],
+    ["integer -> string", "sprintf(buf, \"%d\", val)", "val.to_string()", "strconv.Itoa(val)", "String.valueOf(val)", "val.ToString()", "str(val)", "String(val) / `${val}`"],
+    ["pointer -> integer", "(uintptr_t) ptr", "ptr as usize", "uintptr(ptr)", "N/A (managed refs)", "(IntPtr) ptr / (nint)", "ctypes.addressof", "N/A (managed)"],
+    ["pointer -> pointer", "reinterpret_cast<T*> / (T*)", "ptr as *const U / transmute", "(*U)(unsafe.Pointer(p))", "N/A (type-safe)", "Unsafe.As<T, U>", "ctypes.cast", "N/A (structural)"]
 ]
 
 out = []
 
-out.append("=" * 165)
-out.append("                             MATRIX OF PROGRAMMING LANGUAGE DATA TYPES                             ")
-out.append("=" * 165)
+out.append("=" * 175)
+out.append("                                            DEFINITIVE MASTER MATRIX OF PROGRAMMING DATA TYPES                                            ")
+out.append("=" * 175)
 out.append("")
-out.append("COMPREHENSIVE MULTI-LANGUAGE REFERENCE TABLE ACROSS PRIMITIVE, COMPOSITE, MEMORY, AND ABSTRACTION TYPES")
-out.append("Languages: C (C17/C23) | C++ (C++20/23) | Rust | Go | Java (17/21) | C# (.NET 8/9) | Python (3.10+) | TypeScript (5.x)")
-out.append("Extended Reference: Swift (5/6) | Kotlin (1.9/2.0)")
+out.append("A COMPREHENSIVE, EXHAUSTIVE MULTI-LANGUAGE REFERENCE ACROSS PRIMITIVE, COMPOSITE, CONCURRENCY, HARDWARE, DATABASE, AND META-TYPE SYSTEMS")
+out.append("Primary Languages Covered: C (C17/C23) | C++ (C++20/23) | Rust | Go | Java (17/21) | C# (.NET 8/9) | Python (3.10+) | TypeScript (5.x)")
+out.append("Extended Languages Covered: Zig (0.13+) | Haskell (GHC 9+) | OCaml (5.x) | Swift (5/6) | Kotlin (2.0) | PHP (8.2+) | Ruby (3.2+) | SQL (ISO/PG)")
 out.append("")
 out.append("TABLE OF CONTENTS:")
-out.append("  1. SIGNED INTEGER TYPES")
-out.append("  2. UNSIGNED INTEGER & ARCHITECTURE-SIZED TYPES")
-out.append("  3. FLOATING-POINT, FIXED-POINT & NUMERIC TYPES")
-out.append("  4. BOOLEAN & TEXTUAL CHARACTER TYPES")
-out.append("  5. STRING & CONTIGUOUS BYTE BUFFER TYPES")
-out.append("  6. SEQUENCE & COLLECTION TYPES (ARRAYS, SLICES, TUPLES, QUEUES)")
-out.append("  7. ASSOCIATIVE & SET COLLECTIONS (HASH MAPS, TREES, SETS)")
-out.append("  8. USER-DEFINED, COMPOSITE & OBJECT TYPES (STRUCTS, CLASSES, INTERFACES)")
-out.append("  9. ALGEBRAIC DATA TYPES, ENUMS & VARIANTS")
-out.append(" 10. POINTERS, REFERENCES & MEMORY MANAGEMENT TYPES")
-out.append(" 11. OPTIONALITY, ERROR HANDLING, BOTTOM & TOP TYPES")
-out.append(" 12. FUNCTIONAL, CALLABLE & CLOSURE TYPES")
-out.append(" 13. EXTENDED COMPARISON MATRIX (SWIFT & KOTLIN)")
-out.append(" 14. TYPE SYSTEM PARADIGM & METADATA CHARACTERISTICS")
-out.append(" 15. TYPE CASTING, CONVERSION & PARSING MECHANISMS")
+out.append("  SECTION  1: SIGNED INTEGER TYPES")
+out.append("  SECTION  2: UNSIGNED INTEGER & ARCHITECTURE-SIZED TYPES")
+out.append("  SECTION  3: FLOATING-POINT, FIXED-POINT, RATIONAL & NUMERIC TYPES")
+out.append("  SECTION  4: BOOLEAN & TEXTUAL CHARACTER TYPES")
+out.append("  SECTION  5: STRING & CONTIGUOUS BYTE BUFFER TYPES")
+out.append("  SECTION  6: SEQUENCE & COLLECTION TYPES (ARRAYS, SLICES, TUPLES, QUEUES)")
+out.append("  SECTION  7: ASSOCIATIVE & SET COLLECTIONS (HASH MAPS, TREES, SETS, BITSETS)")
+out.append("  SECTION  8: USER-DEFINED, COMPOSITE & OBJECT TYPES (STRUCTS, CLASSES, INTERFACES)")
+out.append("  SECTION  9: ALGEBRAIC DATA TYPES, ENUMS & VARIANTS")
+out.append("  SECTION 10: POINTERS, REFERENCES & MEMORY MANAGEMENT TYPES")
+out.append("  SECTION 11: OPTIONALITY, ERROR HANDLING, BOTTOM & TOP TYPES")
+out.append("  SECTION 12: FUNCTIONAL, CALLABLE & CLOSURE TYPES")
+out.append("  SECTION 13: CONCURRENCY, ASYNC & THREADING PRIMITIVES")
+out.append("  SECTION 14: SIMD & HARDWARE VECTOR TYPES")
+out.append("  SECTION 15: TEMPORAL TYPES: DATES, TIMES & DURATIONS")
+out.append("  SECTION 16: RELATIONAL DATABASE (SQL) TO PROGRAMMING LANGUAGE TYPE MAPPINGS")
+out.append("  SECTION 17: EXTENDED SYSTEMS, FUNCTIONAL & SCRIPTING LANGUAGES MATRIX (ZIG, HASKELL, OCAML, SWIFT, KOTLIN, PHP, RUBY)")
+out.append("  SECTION 18: COMPREHENSIVE TYPE SYSTEM CHARACTERISTICS & TAXONOMY (15 LANGUAGES)")
+out.append("  SECTION 19: N x N TYPE CONVERSION, CASTING & COERCION MATRIX")
+out.append("  SECTION 20: TYPE THEORY TAXONOMY & DEFINITIVE GLOSSARY")
 out.append("")
 
 def add_section(title, headers, rows):
-    out.append("-" * 165)
-    out.append(f"SECTION {title}")
-    out.append("-" * 165)
+    out.append("-" * 175)
+    out.append(f"{title}")
+    out.append("-" * 175)
     out.append(make_table(headers, rows))
     out.append("")
 
-add_section("1: SIGNED INTEGER TYPES", headers_main, rows_signed_int)
-add_section("2: UNSIGNED INTEGER & ARCHITECTURE-SIZED TYPES", headers_main, rows_unsigned_int)
-add_section("3: FLOATING-POINT, FIXED-POINT & NUMERIC TYPES", headers_main, rows_float)
-add_section("4: BOOLEAN & TEXTUAL CHARACTER TYPES", headers_main, rows_bool_char)
-add_section("5: STRING & CONTIGUOUS BYTE BUFFER TYPES", headers_main, rows_string_bytes)
-add_section("6: SEQUENCE & COLLECTION TYPES (ARRAYS, SLICES, TUPLES, QUEUES)", headers_main, rows_sequences)
-add_section("7: ASSOCIATIVE & SET COLLECTIONS (HASH MAPS, TREES, SETS)", headers_main, rows_associative)
-add_section("8: USER-DEFINED, COMPOSITE & OBJECT TYPES (STRUCTS, CLASSES, INTERFACES)", headers_main, rows_composites)
-add_section("9: ALGEBRAIC DATA TYPES, ENUMS & VARIANTS", headers_main, rows_enums_variants)
-add_section("10: POINTERS, REFERENCES & MEMORY MANAGEMENT TYPES", headers_main, rows_memory)
-add_section("11: OPTIONALITY, ERROR HANDLING, BOTTOM & TOP TYPES", headers_main, rows_special)
-add_section("12: FUNCTIONAL, CALLABLE & CLOSURE TYPES", headers_main, rows_functions)
-add_section("13: EXTENDED COMPARISON MATRIX (SWIFT & KOTLIN)", headers_extended, rows_extended)
-add_section("14: TYPE SYSTEM PARADIGM & METADATA CHARACTERISTICS", headers_type_sys, rows_type_sys)
-add_section("15: TYPE CASTING, CONVERSION & PARSING MECHANISMS", headers_casts, rows_casts)
+add_section("SECTION 1: SIGNED INTEGER TYPES", headers_main, rows_signed_int)
+add_section("SECTION 2: UNSIGNED INTEGER & ARCHITECTURE-SIZED TYPES", headers_main, rows_unsigned_int)
+add_section("SECTION 3: FLOATING-POINT, FIXED-POINT, RATIONAL & NUMERIC TYPES", headers_main, rows_float)
+add_section("SECTION 4: BOOLEAN & TEXTUAL CHARACTER TYPES", headers_main, rows_bool_char)
+add_section("SECTION 5: STRING & CONTIGUOUS BYTE BUFFER TYPES", headers_main, rows_string_bytes)
+add_section("SECTION 6: SEQUENCE & COLLECTION TYPES (ARRAYS, SLICES, TUPLES, QUEUES)", headers_main, rows_sequences)
+add_section("SECTION 7: ASSOCIATIVE & SET COLLECTIONS (HASH MAPS, TREES, SETS, BITSETS)", headers_main, rows_associative)
+add_section("SECTION 8: USER-DEFINED, COMPOSITE & OBJECT TYPES (STRUCTS, CLASSES, INTERFACES)", headers_main, rows_composites)
+add_section("SECTION 9: ALGEBRAIC DATA TYPES, ENUMS & VARIANTS", headers_main, rows_enums_variants)
+add_section("SECTION 10: POINTERS, REFERENCES & MEMORY MANAGEMENT TYPES", headers_main, rows_memory)
+add_section("SECTION 11: OPTIONALITY, ERROR HANDLING, BOTTOM & TOP TYPES", headers_main, rows_special)
+add_section("SECTION 12: FUNCTIONAL, CALLABLE & CLOSURE TYPES", headers_main, rows_functions)
+add_section("SECTION 13: CONCURRENCY, ASYNC & THREADING PRIMITIVES", headers_main, rows_concurrency)
+add_section("SECTION 14: SIMD & HARDWARE VECTOR TYPES", headers_main, rows_simd)
+add_section("SECTION 15: TEMPORAL TYPES: DATES, TIMES & DURATIONS", headers_main, rows_temporal)
+add_section("SECTION 16: RELATIONAL DATABASE (SQL) TO PROGRAMMING LANGUAGE TYPE MAPPINGS", headers_sql, rows_sql)
+add_section("SECTION 17: EXTENDED SYSTEMS, FUNCTIONAL & SCRIPTING LANGUAGES MATRIX (ZIG, HASKELL, OCAML, SWIFT, KOTLIN, PHP, RUBY)", headers_extended, rows_extended)
+add_section("SECTION 18: COMPREHENSIVE TYPE SYSTEM CHARACTERISTICS & TAXONOMY (15 LANGUAGES)", headers_taxonomy, rows_taxonomy)
+add_section("SECTION 19: N x N TYPE CONVERSION, CASTING & COERCION MATRIX", headers_casts, rows_casts)
 
-out.append("=" * 165)
-out.append("                                        END OF MATRIX OF TYPES                                      ")
-out.append("=" * 165)
+# Add Section 20 Glossary
+out.append("-" * 175)
+out.append("SECTION 20: TYPE THEORY TAXONOMY & DEFINITIVE GLOSSARY")
+out.append("-" * 175)
+glossary_text = """
+1. SCALAR / PRIMITIVE TYPES
+   - An indivisible value that holds a single data unit (e.g., integer, floating point, boolean, character).
+   - In low-level systems (C, Rust, Go), these map directly to CPU registers and machine words.
+
+2. PRODUCT TYPES (Records, Tuples, Structs)
+   - In type theory, a Product Type A x B is a composite type where a value contains BOTH an instance of A AND an instance of B.
+   - Examples: `(int, string)` tuple, `struct Point { int x; int y; }`. The cardinality of possible values is |A| * |B|.
+
+3. SUM TYPES / COPUDUCTS (Tagged Unions, Discriminated Unions, Algebraic Data Types)
+   - A type A + B where a value contains EITHER an instance of A OR an instance of B, with a runtime or compiler tag distinguishing them.
+   - Examples: Rust `enum`, Haskell `data`, Swift `enum with associated values`, C++ `std::variant`. The cardinality is |A| + |B|.
+
+4. UNIT TYPE ( () / void ) vs BOTTOM TYPE ( ! / never / Nothing )
+   - Unit Type (1): A type with exactly ONE value. It carries no information. Used when a function finishes normally but returns nothing meaningful.
+     Examples: Rust `()`, OCaml/Haskell `()`, Go `struct{}`, Kotlin `Unit`, Swift `Void`.
+   - Bottom Type (0 / Empty): A type with ZERO values. It can never be instantiated. Used to represent computations that NEVER return (infinite loops,
+     panics, fatal exits, exceptions).
+     Examples: Rust `!`, TypeScript `never`, Kotlin `Nothing`, Python `typing.Never`, Haskell `Void`.
+
+5. TOP TYPE ( Universal Supertype / Any )
+   - The type that is a supertype of all other types. Any value in the system can be assigned to a variable of this type.
+   - Examples: TypeScript `unknown` / `any`, Java `java.lang.Object`, C# `object`, Go `any` (`interface{}`), Python `object` / `typing.Any`.
+
+6. NOMINAL vs STRUCTURAL vs DUCK TYPING
+   - Nominal Typing: Type compatibility and equivalence are determined solely by explicit declaration and name.
+     Even if two structs have identical fields, they are distinct and incompatible unless explicitly related by inheritance. (Java, C++, Rust, C#).
+   - Structural Typing: Type compatibility is determined by the shape and layout of the type (its members and method signatures).
+     If type A has all properties of type B, A is assignable to B without declaring an explicit relationship. (TypeScript, Go interfaces, OCaml objects).
+   - Duck Typing: Runtime structural typing ("If it walks like a duck and quacks like a duck, it's a duck"). No compile-time checks; method dispatch
+     fails at runtime if the member does not exist. (Python, Ruby, JavaScript).
+
+7. TYPE SAFETY: SOUNDNESS vs COMPLETENESS
+   - Soundness: A type system is sound if well-typed programs are guaranteed to never cause undefined behavior or type errors at runtime ("Well-typed
+     programs cannot go wrong"). Rust, Haskell, and Standard ML prioritize soundness.
+   - Completeness: A type system is complete if every program that would not fail at runtime is accepted by the type checker. In practice, undecidability
+     (Rice's theorem / Halting problem) makes simultaneously sound and complete static analysis impossible.
+   - TypeScript intentionally trades strict soundness for developer expressiveness and JS compatibility (`any` escapes, bivariant method parameters).
+
+8. GENERICS & POLYMORPHISM MECHANISMS
+   - Monomorphization: The compiler generates a distinct copy of machine code for every concrete type used with a generic function or template.
+     Pros: Zero runtime overhead, inlineable, optimal CPU cache. Cons: Code bloat, longer compilation times. (C++ templates, Rust generics, Zig comptime).
+   - Type Erasure: Generic type parameters are checked at compile time and then erased; a single compiled function operates on universal pointers (`Object`).
+     Pros: Tiny binary footprint, rapid compilation. Cons: Boxing/unboxing overhead for primitives, reflection lacks runtime type parameters. (Java, TypeScript).
+   - Reified Generics: The runtime preserves exact type parameters in bytecode/metadata, enabling `typeof(T)`, zero-overhead value-type specialization,
+     and runtime type queries. (C# CLR generics).
+"""
+out.append(glossary_text.strip())
+out.append("")
+out.append("=" * 175)
+out.append("                                                       END OF DEFINITIVE MATRIX OF TYPES                                                      ")
+out.append("=" * 175)
 
 content = "\n".join(out)
 target_path = "/Volumes/External/Code/matrix_of_types/matrix_of_types.txt"
