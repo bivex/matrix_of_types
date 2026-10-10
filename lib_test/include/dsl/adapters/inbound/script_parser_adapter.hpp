@@ -25,6 +25,12 @@ public:
         Star,
         Slash,
         Percent,
+        Caret,
+        Ampersand,
+        Pipe,
+        Tilde,
+        LeftShift,
+        RightShift,
         EqualEqual,
         BangEqual,
         Less,
@@ -35,7 +41,8 @@ public:
         OrOr,
         Bang,
         LeftParen,
-        RightParen
+        RightParen,
+        Comma
     };
 
     struct Token {
@@ -107,6 +114,8 @@ private:
                 if (two == ">=") { tokens_.push_back({TokenType::GreaterEqual, ">="}); i += 2; continue; }
                 if (two == "&&") { tokens_.push_back({TokenType::AndAnd, "&&"}); i += 2; continue; }
                 if (two == "||") { tokens_.push_back({TokenType::OrOr, "||"}); i += 2; continue; }
+                if (two == "<<") { tokens_.push_back({TokenType::LeftShift, "<<"}); i += 2; continue; }
+                if (two == ">>") { tokens_.push_back({TokenType::RightShift, ">>"}); i += 2; continue; }
             }
 
             // Single-character tokens
@@ -116,11 +125,16 @@ private:
                 case '*': tokens_.push_back({TokenType::Star, "*"}); break;
                 case '/': tokens_.push_back({TokenType::Slash, "/"}); break;
                 case '%': tokens_.push_back({TokenType::Percent, "%"}); break;
+                case '^': tokens_.push_back({TokenType::Caret, "^"}); break;
+                case '&': tokens_.push_back({TokenType::Ampersand, "&"}); break;
+                case '|': tokens_.push_back({TokenType::Pipe, "|"}); break;
+                case '~': tokens_.push_back({TokenType::Tilde, "~"}); break;
                 case '<': tokens_.push_back({TokenType::Less, "<"}); break;
                 case '>': tokens_.push_back({TokenType::Greater, ">"}); break;
                 case '!': tokens_.push_back({TokenType::Bang, "!"}); break;
                 case '(': tokens_.push_back({TokenType::LeftParen, "("}); break;
                 case ')': tokens_.push_back({TokenType::RightParen, ")"}); break;
+                case ',': tokens_.push_back({TokenType::Comma, ","}); break;
                 default:
                     throw std::runtime_error(std::string("Unexpected character in DSL: '") + c + "'");
             }
@@ -144,11 +158,31 @@ private:
     }
 
     domain::model::AstNodePtr parse_and() {
-        auto expr = parse_equality();
+        auto expr = parse_bitwise_or();
         while (match(TokenType::AndAnd)) {
-            auto right = parse_equality();
+            auto right = parse_bitwise_or();
             expr = std::make_shared<domain::model::BinaryNode>(
                 domain::model::OperatorType::And, expr, right);
+        }
+        return expr;
+    }
+
+    domain::model::AstNodePtr parse_bitwise_or() {
+        auto expr = parse_bitwise_and();
+        while (match(TokenType::Pipe)) {
+            auto right = parse_bitwise_and();
+            expr = std::make_shared<domain::model::BinaryNode>(
+                domain::model::OperatorType::BitOr, expr, right);
+        }
+        return expr;
+    }
+
+    domain::model::AstNodePtr parse_bitwise_and() {
+        auto expr = parse_equality();
+        while (match(TokenType::Ampersand)) {
+            auto right = parse_equality();
+            expr = std::make_shared<domain::model::BinaryNode>(
+                domain::model::OperatorType::BitAnd, expr, right);
         }
         return expr;
     }
@@ -167,7 +201,7 @@ private:
     }
 
     domain::model::AstNodePtr parse_relational() {
-        auto expr = parse_additive();
+        auto expr = parse_shift();
         while (check(TokenType::Less) || check(TokenType::LessEqual) ||
                check(TokenType::Greater) || check(TokenType::GreaterEqual)) {
             auto op_token = advance();
@@ -177,6 +211,19 @@ private:
             else if (op_token.type == TokenType::Greater) op = domain::model::OperatorType::Greater;
             else op = domain::model::OperatorType::GreaterEqual;
 
+            auto right = parse_shift();
+            expr = std::make_shared<domain::model::BinaryNode>(op, expr, right);
+        }
+        return expr;
+    }
+
+    domain::model::AstNodePtr parse_shift() {
+        auto expr = parse_additive();
+        while (check(TokenType::LeftShift) || check(TokenType::RightShift)) {
+            auto op_token = advance();
+            auto op = (op_token.type == TokenType::LeftShift)
+                ? domain::model::OperatorType::ShiftLeft
+                : domain::model::OperatorType::ShiftRight;
             auto right = parse_additive();
             expr = std::make_shared<domain::model::BinaryNode>(op, expr, right);
         }
@@ -197,7 +244,7 @@ private:
     }
 
     domain::model::AstNodePtr parse_multiplicative() {
-        auto expr = parse_unary();
+        auto expr = parse_power();
         while (check(TokenType::Star) || check(TokenType::Slash) || check(TokenType::Percent)) {
             auto op_token = advance();
             domain::model::OperatorType op;
@@ -205,8 +252,18 @@ private:
             else if (op_token.type == TokenType::Slash) op = domain::model::OperatorType::Divide;
             else op = domain::model::OperatorType::Modulo;
 
-            auto right = parse_unary();
+            auto right = parse_power();
             expr = std::make_shared<domain::model::BinaryNode>(op, expr, right);
+        }
+        return expr;
+    }
+
+    domain::model::AstNodePtr parse_power() {
+        auto expr = parse_unary();
+        if (match(TokenType::Caret)) {
+            auto right = parse_power(); // Right-associative: 2 ^ 3 ^ 2
+            return std::make_shared<domain::model::BinaryNode>(
+                domain::model::OperatorType::Power, expr, right);
         }
         return expr;
     }
@@ -221,6 +278,11 @@ private:
             auto operand = parse_unary();
             return std::make_shared<domain::model::UnaryNode>(
                 domain::model::OperatorType::Subtract, operand);
+        }
+        if (match(TokenType::Tilde)) {
+            auto operand = parse_unary();
+            return std::make_shared<domain::model::UnaryNode>(
+                domain::model::OperatorType::BitNot, operand);
         }
         return parse_primary();
     }
@@ -245,8 +307,19 @@ private:
             return std::make_shared<domain::model::LiteralNode>(domain::model::Literal(tok.text));
         }
         if (check(TokenType::Identifier)) {
-            auto tok = advance();
-            return std::make_shared<domain::model::VariableNode>(domain::model::Identifier(tok.text));
+            auto ident_token = advance();
+            // Check for function call
+            if (match(TokenType::LeftParen)) {
+                std::vector<domain::model::AstNodePtr> args;
+                if (!check(TokenType::RightParen)) {
+                    do {
+                        args.push_back(parse_expression());
+                    } while (match(TokenType::Comma));
+                }
+                consume(TokenType::RightParen, "Expected ')' after function arguments");
+                return std::make_shared<domain::model::FunctionCallNode>(ident_token.text, std::move(args));
+            }
+            return std::make_shared<domain::model::VariableNode>(domain::model::Identifier(ident_token.text));
         }
         if (match(TokenType::LeftParen)) {
             auto expr = parse_expression();

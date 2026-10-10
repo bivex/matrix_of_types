@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <stack>
+#include <algorithm>
 
 namespace dsl::domain::services {
 
@@ -89,12 +90,25 @@ public:
             return;
         }
 
+        // Bitwise
+        if (node.op() == OperatorType::BitAnd || node.op() == OperatorType::BitOr ||
+            node.op() == OperatorType::BitXor || node.op() == OperatorType::ShiftLeft ||
+            node.op() == OperatorType::ShiftRight) {
+            type_stack_.push(DslType::Integer);
+            return;
+        }
+
         // Arithmetic
         if (node.op() == OperatorType::Add) {
             if (left_t == DslType::String || right_t == DslType::String) {
                 type_stack_.push(DslType::String);
                 return;
             }
+        }
+
+        if (node.op() == OperatorType::Power) {
+            type_stack_.push(DslType::Float);
+            return;
         }
 
         if (left_t == DslType::Float || right_t == DslType::Float) {
@@ -121,6 +135,25 @@ public:
             type_stack_.push(DslType::Boolean);
         } else if (node.op() == OperatorType::Subtract) {
             type_stack_.push(op_t == DslType::Float ? DslType::Float : DslType::Integer);
+        } else if (node.op() == OperatorType::BitNot) {
+            type_stack_.push(DslType::Integer);
+        }
+    }
+
+    void visit(const model::FunctionCallNode& node) override {
+        for (const auto& arg : node.args()) {
+            arg->accept(*this);
+            if (has_error_) return;
+            type_stack_.pop();
+        }
+
+        auto lower_name = node.name();
+        std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(), [](unsigned char c){ return std::tolower(c); });
+
+        if (lower_name == "gcd" || lower_name == "lcm" || lower_name == "factorial") {
+            type_stack_.push(model::DslType::Integer);
+        } else {
+            type_stack_.push(model::DslType::Float);
         }
     }
 

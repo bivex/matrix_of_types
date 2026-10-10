@@ -3,6 +3,7 @@
 #include "types.hpp"
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace dsl::domain::model {
 
@@ -10,6 +11,7 @@ class LiteralNode;
 class VariableNode;
 class BinaryNode;
 class UnaryNode;
+class FunctionCallNode;
 
 // Visitor Interface for AST
 class IAstVisitor {
@@ -19,6 +21,7 @@ public:
     virtual void visit(const VariableNode& node) = 0;
     virtual void visit(const BinaryNode& node) = 0;
     virtual void visit(const UnaryNode& node) = 0;
+    virtual void visit(const FunctionCallNode& node) = 0;
 };
 
 // Base AST Node (Immutable)
@@ -121,6 +124,38 @@ public:
 private:
     OperatorType op_;
     AstNodePtr operand_;
+};
+
+// Node: Mathematical or Custom Function Call
+class FunctionCallNode final : public IAstNode {
+public:
+    FunctionCallNode(std::string function_name, std::vector<AstNodePtr> args)
+        : function_name_(std::move(function_name)), args_(std::move(args)) {
+        if (function_name_.empty()) {
+            throw std::invalid_argument("Function name cannot be empty");
+        }
+    }
+
+    [[nodiscard]] const std::string& name() const noexcept { return function_name_; }
+    [[nodiscard]] const std::vector<AstNodePtr>& args() const noexcept { return args_; }
+
+    [[nodiscard]] std::string to_string() const override {
+        std::string s = function_name_ + "(";
+        for (size_t i = 0; i < args_.size(); ++i) {
+            if (i > 0) s += ", ";
+            s += args_[i]->to_string();
+        }
+        s += ")";
+        return s;
+    }
+
+    void accept(IAstVisitor& visitor) const override {
+        visitor.visit(*this);
+    }
+
+private:
+    std::string function_name_;
+    std::vector<AstNodePtr> args_;
 };
 
 } // namespace dsl::domain::model

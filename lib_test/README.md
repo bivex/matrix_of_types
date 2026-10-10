@@ -120,6 +120,26 @@ engine.compile_script("rule_script_1", "Access Rule", script);
 
 ---
 
+## 🧮 Comprehensive Mathematical Operations Reference
+
+The DSL provides an exhaustive mathematical suite available in both C++ Fluent EDSL and External Text Scripts:
+
+| Category | Operators / Functions | Examples & Semantics |
+| :--- | :--- | :--- |
+| **Arithmetic Operators** | `+`, `-`, `*`, `/`, `%`, `^` (power) | `a + b * c`, `x ^ 2` (exponentiation) |
+| **Bitwise Operators** | `&`, `|`, `~` (not), `<<`, `>>` | `(flags & 0xFF) != 0`, `1 << 4` |
+| **Roots & Powers** | `sqrt`, `cbrt`, `pow(x, y)`, `hypot(x, y)` | `hypot(dx, dy) <= radius`, `sqrt(100)` |
+| **Exponents & Logarithms** | `exp`, `exp2`, `log` (ln), `log10`, `log2` | `log10(intensity)`, `exp(-decay * t)` |
+| **Trigonometry** | `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2(y, x)` | `sin(angle) * velocity`, `atan2(dy, dx)` |
+| **Hyperbolic Functions** | `sinh`, `cosh`, `tanh`, `asinh`, `acosh`, `atanh` | `cosh(x)`, `tanh(z)` |
+| **Rounding & Bounds** | `floor`, `ceil`, `round`, `trunc`, `abs`, `sign`/`sgn` | `round(val)`, `abs(delta) < 0.001` |
+| **Extrema & Clamping** | `min(a, b)`, `max(a, b)`, `clamp(val, min, max)` | `clamp(speed, 0, 100)` |
+| **Discrete Mathematics** | `gcd(a, b)`, `lcm(a, b)`, `factorial(n)` | `gcd(w, h)`, `factorial(5) == 120` |
+| **Special Functions** | `erf(x)`, `gamma(x)` / `tgamma(x)` | `erf(z)` (error function) |
+| **Math Constants** | `pi`, `e`, `tau` | `round(pi * radius ^ 2)` |
+
+---
+
 ## 🛠️ Building & Running
 
 Requires a modern C++20 compiler (`AppleClang 15+`, `GCC 11+`, or `Clang 14+`) and CMake 3.20+.

@@ -34,6 +34,13 @@ enum class OperatorType {
     Multiply,
     Divide,
     Modulo,
+    Power,
+    BitAnd,
+    BitOr,
+    BitXor,
+    BitNot,
+    ShiftLeft,
+    ShiftRight,
     Equal,
     NotEqual,
     Less,
@@ -52,6 +59,13 @@ inline std::string to_string(OperatorType op) {
         case OperatorType::Multiply:     return "*";
         case OperatorType::Divide:       return "/";
         case OperatorType::Modulo:       return "%";
+        case OperatorType::Power:        return "^";
+        case OperatorType::BitAnd:       return "&";
+        case OperatorType::BitOr:        return "|";
+        case OperatorType::BitXor:       return "^^";
+        case OperatorType::BitNot:       return "~";
+        case OperatorType::ShiftLeft:    return "<<";
+        case OperatorType::ShiftRight:   return ">>";
         case OperatorType::Equal:        return "==";
         case OperatorType::NotEqual:     return "!=";
         case OperatorType::Less:         return "<";
@@ -149,7 +163,7 @@ private:
     ValueVariant value_;
 };
 
-// Value Object: Identifier (Variable or Column Name)
+// Value Object: Identifier (Variable, Column Name, Function Name)
 class Identifier {
 public:
     explicit Identifier(std::string name) : name_(std::move(name)) {
